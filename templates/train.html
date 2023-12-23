@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halaman Pelatihan Suara</title>
+    <!-- Tambahkan pustaka Recorder.js -->
+    <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+    <style>
+        body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+}
+
+header {
+    background-color: #3498db;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+}
+
+nav a {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 10px;
+    font-weight: bold;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 20px;
+}
+
+button {
+    background-color: #2ecc71;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+    font-size: 16px;
+}
+
+button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+footer {
+    background-color: #34495e;
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+    </style>
+</head>
+<body>
+    <h1>Halaman Pelatihan Suara</h1>
+
+    <button id="startRecording">Mulai Perekaman</button>
+    <button id="stopRecording" disabled>Hentikan Perekaman</button>
+    <button id="saveRecording" disabled>Simpan Rekaman</button>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        var recorder;
+        var audioContext;
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    var input = audioContext.createMediaStreamSource(stream);
+                    recorder = new Recorder(input);
+                    recorder.record();
+
+                    // Aktifkan tombol stopRecording dan nonaktifkan tombol startRecording
+                    $('#startRecording').prop('disabled', true);
+                    $('#stopRecording').prop('disabled', false);
+                    $('#saveRecording').prop('disabled', true);
+                })
+                .catch(function(err) {
+                    console.error('Error accessing microphone:', err);
+                });
+        }
+
+        function stopRecording() {
+            recorder.stop();
+            audioContext.close();
+
+            // Aktifkan tombol startRecording dan saveRecording, nonaktifkan tombol stopRecording
+            $('#startRecording').prop('disabled', false);
+            $('#stopRecording').prop('disabled', true);
+            $('#saveRecording').prop('disabled', false);
+        }
+
+        function saveRecording() {
+            recorder.exportWAV(function(blob) {
+                recorder.clear();
+                var reader = new FileReader();
+                reader.onloadend = function() {
+                    // Kirim rekaman ke server
+                    var audioData = reader.result.split(',')[1];
+                    var speakerLabel = prompt('Masukkan label identitas speaker:');
+
+                    $.ajax({
+                        type: 'POST',
+                        url: '/save_training_recording',
+                        contentType: 'application/json;charset=UTF-8',
+                        data: JSON.stringify({ audio_data: audioData, speaker_label: speakerLabel }),
+                        success: function(response) {
+                            console.log('Rekaman berhasil disimpan:', response.filename);
+                        },
+                        error: function(error) {
+                            console.error('Gagal menyimpan rekaman:', error);
+                        }
+                    });
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        $(document).ready(function() {
+            $('#startRecording').click(function() {
+                startRecording();
+            });
+
+            $('#stopRecording').click(function() {
+                stopRecording();
+            });
+
+            $('#saveRecording').click(function() {
+                saveRecording();
+            });
+        });
+    </script>
+</body>
+</html>

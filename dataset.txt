@@ -1,0 +1,3 @@
+anjing,anjing.jpg
+ayam,ayam.jpg
+kucing,kucing.jpg
